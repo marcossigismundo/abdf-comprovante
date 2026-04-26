@@ -63,7 +63,7 @@ class ABDF_PDF {
 
 		$pdf->set_text_color( 90, 90, 90 );
 		$pdf->set_font( 'helvetica', '', 10 );
-		$pdf->text( 20, $title_y + 8, 'Documento referente ao exercício de ' . $year, 'C', 170 );
+		$pdf->text( 20, $title_y + 8, 'Documento referente ao exercício de ' . self::format_period( $year ), 'C', 170 );
 
 		// Caixa do número
 		$box_y = $title_y + 16;
@@ -79,16 +79,18 @@ class ABDF_PDF {
 		$pdf->set_font( 'helvetica', '', 12 );
 		$pdf->multi_text( 25, $box_y + 28, 160, 7, $body_text, 'L' );
 
-		// Local e data
-		$pdf->set_font( 'helvetica', '', 11 );
-		$pdf->text( 20, 200, 'Brasília-DF, ' . self::format_date_pt( current_time( 'Y-m-d' ) ) . '.', 'L', 170 );
-
-		// Linha de assinatura
-		$pdf->set_draw_color( 80, 80, 80 );
-		$pdf->line( 70, 230, 140, 230, 0.4 );
+		// Local e data — alinhada à direita, com folga acima do corpo
 		$pdf->set_text_color( 60, 60, 60 );
-		$pdf->set_font( 'helvetica', '', 10 );
-		$pdf->text( 70, 235, 'Diretoria — ABDF', 'C', 70 );
+		$pdf->set_font( 'helvetica', '', 11 );
+		$pdf->text( 20, 218, 'Brasília-DF, ' . self::format_date_pt( current_time( 'Y-m-d' ) ) . '.', 'R', 170 );
+
+		// Identificação institucional ao final (sem assinatura nem "Diretoria")
+		$pdf->set_text_color( 30, 30, 30 );
+		$pdf->set_font( 'helvetica', 'B', 10 );
+		$pdf->multi_text( 20, 240, 170, 5,
+			'ABDF - ASSOCIAÇÃO DOS BIBLIOTECÁRIOS E PROFISSIONAIS DA CIÊNCIA DA INFORMAÇÃO DO DISTRITO FEDERAL',
+			'L'
+		);
 
 		// Box de verificação no rodapé
 		$pdf->set_draw_color( 200, 200, 200 );
@@ -127,10 +129,19 @@ class ABDF_PDF {
 		$template = ! empty( $settings['certificate_template'] ) ? $settings['certificate_template'] : $default;
 
 		return strtr( $template, array(
-			'{NOME}'  => $member->full_name,
-			'{ANO}'   => (string) $year,
-			'{EMAIL}' => $member->email,
+			'{NOME}'      => $member->full_name,
+			'{ANO}'       => self::format_period( $year ),
+			'{EXERCICIO}' => self::format_period( $year ),
+			'{EMAIL}'     => $member->email,
 		) );
+	}
+
+	/**
+	 * Exercício no formato "YYYY-1/YYYY" (ex.: 2025/2026).
+	 */
+	public static function format_period( $year ) {
+		$year = (int) $year;
+		return ( $year - 1 ) . '/' . $year;
 	}
 
 	public static function verification_url( $certificate ) {
