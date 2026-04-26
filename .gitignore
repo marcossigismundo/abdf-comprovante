@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editores
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs / temporários
+*.log
+*.tmp
+/tmp/
+
+# Build / artefatos locais
+node_modules/
+dist/
+.cache/
+
+# WordPress (caso o repo seja clonado dentro de um WP local)
+wp-config.php
+.htaccess
