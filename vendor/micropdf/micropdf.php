@@ -22,6 +22,7 @@ class ABDF_MicroPDF {
 
 	private $pages   = array();
 	private $current = '';
+	private $images  = array(); // [name => ['data','w','h','colors']]
 
 	private $current_font = 'F1';
 	private $current_size = 12;
@@ -145,6 +146,70 @@ class ABDF_MicroPDF {
 		$this->current .= "q\n{$this->line_color} RG\n{$width_pt} w\n{$x1} {$y1} m {$x2} {$y2} l S\nQ\n";
 	}
 
+	/**
+	 * Insere um JPEG (com Filter /DCTDecode — sem reencodificar).
+	 * Para PNG, converta antes para JPEG (ex.: via GD).
+	 */
+	public function image_jpeg( $file_path, $x_mm, $y_mm, $w_mm, $h_mm = 0 ) {
+		if ( ! file_exists( $file_path ) ) { return false; }
+		$data = file_get_contents( $file_path );
+		$info = self::parse_jpeg( $data );
+		if ( ! $info ) { return false; }
+		list( $iw, $ih, $colors ) = $info;
+
+		// Se a altura não foi informada, calcula proporcional.
+		if ( $h_mm <= 0 ) {
+			$h_mm = $w_mm * ( $ih / $iw );
+		}
+
+		$key = md5( $data );
+		if ( ! isset( $this->images[ $key ] ) ) {
+			$this->images[ $key ] = array(
+				'data'   => $data,
+				'w'      => $iw,
+				'h'      => $ih,
+				'colors' => $colors,
+				'name'   => 'I' . ( count( $this->images ) + 1 ),
+			);
+		}
+		$name = $this->images[ $key ]['name'];
+
+		$x  = $x_mm * self::PT_PER_MM;
+		$y  = $this->page_h_pt - ( $y_mm + $h_mm ) * self::PT_PER_MM;
+		$w  = $w_mm * self::PT_PER_MM;
+		$h  = $h_mm * self::PT_PER_MM;
+
+		// "cm": matriz de transformação (escala + translação) e "Do": desenha o XObject.
+		$this->current .= "q\n{$w} 0 0 {$h} {$x} {$y} cm\n/{$name} Do\nQ\n";
+		return array( 'w_mm' => $w_mm, 'h_mm' => $h_mm );
+	}
+
+	private static function parse_jpeg( $data ) {
+		$len = strlen( $data );
+		if ( $len < 4 || substr( $data, 0, 2 ) !== "\xFF\xD8" ) { return false; }
+		$i = 2;
+		while ( $i < $len - 1 ) {
+			if ( $data[ $i ] !== "\xFF" ) { return false; }
+			$marker = ord( $data[ $i + 1 ] );
+			// SOI/EOI sem comprimento
+			if ( $marker === 0xD8 || $marker === 0xD9 ) { $i += 2; continue; }
+			// SOS — fim do header
+			if ( $marker === 0xDA ) { return false; }
+			if ( $i + 4 > $len ) { return false; }
+			$seg_len = ( ord( $data[ $i + 2 ] ) << 8 ) | ord( $data[ $i + 3 ] );
+			// SOF0/1/2/3 contêm dimensões
+			if ( in_array( $marker, array( 0xC0, 0xC1, 0xC2, 0xC3 ), true ) && $i + 9 < $len ) {
+				$h          = ( ord( $data[ $i + 5 ] ) << 8 ) | ord( $data[ $i + 6 ] );
+				$w          = ( ord( $data[ $i + 7 ] ) << 8 ) | ord( $data[ $i + 8 ] );
+				$components = ord( $data[ $i + 9 ] );
+				$colors     = $components === 3 ? 'DeviceRGB' : ( $components === 1 ? 'DeviceGray' : 'DeviceCMYK' );
+				return array( $w, $h, $colors );
+			}
+			$i += 2 + $seg_len;
+		}
+		return false;
+	}
+
 	public function rect( $x_mm, $y_mm, $w_mm, $h_mm, $style = 'D', $width_pt = 0.5 ) {
 		$x = $x_mm * self::PT_PER_MM;
 		$y = $this->page_h_pt - ( $y_mm + $h_mm ) * self::PT_PER_MM;
@@ -161,15 +226,18 @@ class ABDF_MicroPDF {
 		$this->pages[] = $this->current;
 		$this->current = '';
 
-		$objects   = array();
-		$obj_index = 0;
+		$objects = array();
 
-		// 1: catalog, 2: pages
-		$page_count   = count( $this->pages );
+		$page_count = count( $this->pages );
+		$image_count = count( $this->images );
+
+		// IDs: 1 catalog, 2 pages, 3..6 fontes, 7..(6+N) imagens, depois pares (page, content).
+		$first_image_id = 7;
+		$first_page_id  = $first_image_id + $image_count;
+
 		$page_obj_ids = array();
-		// Reservamos IDs: 1 catalog, 2 pages, 3..6 fonts, depois pares (page, content)
 		for ( $i = 0; $i < $page_count; $i++ ) {
-			$page_obj_ids[ $i ] = 7 + $i * 2;
+			$page_obj_ids[ $i ] = $first_page_id + $i * 2;
 		}
 
 		$objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
@@ -189,12 +257,27 @@ class ABDF_MicroPDF {
 		$objects[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>';
 		$objects[6] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>';
 
+		// XObjects de imagem (JPEG embutido com /DCTDecode).
+		$image_refs_dict = '';
+		$image_id = $first_image_id;
+		foreach ( $this->images as $img ) {
+			$len = strlen( $img['data'] );
+			$objects[ $image_id ] = "<< /Type /XObject /Subtype /Image /Width {$img['w']} /Height {$img['h']} "
+				. "/ColorSpace /{$img['colors']} /BitsPerComponent 8 /Filter /DCTDecode /Length {$len} >>\n"
+				. "stream\n" . $img['data'] . "\nendstream";
+			$image_refs_dict .= "/{$img['name']} {$image_id} 0 R ";
+			$image_id++;
+		}
+
+		$xobject_dict = $image_refs_dict ? " /XObject << {$image_refs_dict}>>" : '';
+
 		foreach ( $this->pages as $i => $stream ) {
 			$page_id    = $page_obj_ids[ $i ];
 			$content_id = $page_id + 1;
 
 			$objects[ $page_id ] = sprintf(
-				'<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> /Contents %d 0 R >>',
+				'<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >>%s >> /Contents %d 0 R >>',
+				$xobject_dict,
 				$content_id
 			);
 

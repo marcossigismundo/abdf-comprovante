@@ -51,6 +51,8 @@ class ABDF_Admin {
 		$out['address']              = sanitize_textarea_field( $input['address'] ?? '' );
 		$out['phones']               = sanitize_text_field( $input['phones'] ?? '' );
 		$out['certificate_template'] = wp_kses_post( $input['certificate_template'] ?? '' );
+		$out['logo_url']             = esc_url_raw( $input['logo_url'] ?? '' );
+		$out['contact_email']        = sanitize_email( $input['contact_email'] ?? '' );
 		$out['recaptcha_site']       = sanitize_text_field( $input['recaptcha_site'] ?? '' );
 		$out['recaptcha_secret']     = sanitize_text_field( $input['recaptcha_secret'] ?? '' );
 		$out['recaptcha_min_score']  = (float) ( $input['recaptcha_min_score'] ?? 0.5 );

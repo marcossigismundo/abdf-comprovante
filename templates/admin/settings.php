@@ -22,6 +22,20 @@
 				<th><label><?php esc_html_e( 'Telefones', 'abdf-comprovante' ); ?></label></th>
 				<td><input type="text" class="large-text" name="abdf_settings[phones]" value="<?php echo esc_attr( $settings['phones'] ?? '' ); ?>" /></td>
 			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'E-mail de contato', 'abdf-comprovante' ); ?></label></th>
+				<td>
+					<input type="email" class="regular-text" name="abdf_settings[contact_email]" value="<?php echo esc_attr( $settings['contact_email'] ?? 'abdf@abdf.org.br' ); ?>" />
+					<p class="description"><?php esc_html_e( 'Mostrado no modal de ajuda do formulário público.', 'abdf-comprovante' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'URL da logo', 'abdf-comprovante' ); ?></label></th>
+				<td>
+					<input type="url" class="large-text" name="abdf_settings[logo_url]" value="<?php echo esc_attr( $settings['logo_url'] ?? 'https://abdf.org.br/wp-content/uploads/2024/08/logo2.png' ); ?>" />
+					<p class="description"><?php esc_html_e( 'A imagem é baixada e cacheada localmente em uploads/abdf-comprovante/. Mude a URL para forçar atualização.', 'abdf-comprovante' ); ?></p>
+				</td>
+			</tr>
 		</table>
 
 		<h2><?php esc_html_e( 'Texto do comprovante', 'abdf-comprovante' ); ?></h2>

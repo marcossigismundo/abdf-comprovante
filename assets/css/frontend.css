@@ -120,3 +120,5 @@
 .abdf-modal__panel h3{ margin:8px 0 12px; color:var(--abdf-primary);}
 .abdf-modal__panel ul{ text-align:left; padding-left:18px; color:var(--abdf-muted); }
 .abdf-success-mark{ width:64px; height:64px; }
+.abdf-contact{ color:var(--abdf-primary); font-weight:600; text-decoration:underline; }
+.abdf-contact:hover{ color:var(--abdf-primary-dark); }

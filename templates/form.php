@@ -1,4 +1,8 @@
-<?php if ( ! defined( 'ABSPATH' ) ) { exit; } ?>
+<?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+$abdf_settings = get_option( 'abdf_settings', array() );
+$abdf_contact_email = ! empty( $abdf_settings['contact_email'] ) ? $abdf_settings['contact_email'] : 'abdf@abdf.org.br';
+?>
 <div class="abdf-wrap">
 	<div class="abdf-card">
 		<div class="abdf-card__head">
@@ -16,7 +20,7 @@
 		<form id="abdf-form" novalidate>
 			<label class="abdf-label" for="abdf-term"><?php esc_html_e( 'Nome completo ou e-mail cadastrado', 'abdf-comprovante' ); ?></label>
 			<input id="abdf-term" name="term" type="text" autocomplete="off"
-				placeholder="<?php esc_attr_e( 'Ex.: Maria Tereza Walter ou maria@exemplo.org', 'abdf-comprovante' ); ?>"
+				placeholder="<?php esc_attr_e( 'Ex.: Maria da Silva Souza ou maria@exemplo.org', 'abdf-comprovante' ); ?>"
 				required minlength="4" />
 
 			<label class="abdf-checkbox">
@@ -64,7 +68,10 @@
 		<ul>
 			<li><?php esc_html_e( 'Tente o e-mail informado no momento da filiação.', 'abdf-comprovante' ); ?></li>
 			<li><?php esc_html_e( 'Use o nome completo, com acentos.', 'abdf-comprovante' ); ?></li>
-			<li><?php esc_html_e( 'Ainda assim sem sucesso? Entre em contato com a secretaria da ABDF.', 'abdf-comprovante' ); ?></li>
+			<li>
+				<?php esc_html_e( 'Ainda assim sem sucesso? Entre em contato com a secretaria da ABDF pelo e-mail', 'abdf-comprovante' ); ?>
+				<a class="abdf-contact" href="mailto:<?php echo esc_attr( $abdf_contact_email ); ?>?subject=<?php echo rawurlencode( 'Comprovante de situação cadastral' ); ?>"><?php echo esc_html( $abdf_contact_email ); ?></a>.
+			</li>
 		</ul>
 		<p class="abdf-note"><?php esc_html_e( 'Por segurança, há limite de tentativas por IP em curto intervalo.', 'abdf-comprovante' ); ?></p>
 	</div>
